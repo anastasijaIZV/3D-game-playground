@@ -21,10 +21,11 @@ public class PlayerMovement : MonoBehaviour
     public float speedIncreaseMultiplier;
     public float slopeIncreaseMultiplier;
     public float impactThreshold;
-    public float itemPickupDistance = 5f;
     private bool isSliding = false;
     private float originalWalkSpeed = 4f;
     private float originalRunSpeed = 6f;
+    public Transform holdPoint;
+
 
 
     [Header("Camera Effects")]
@@ -72,6 +73,7 @@ public class PlayerMovement : MonoBehaviour
 
     private Transform attachedObject = null;
     private float attachedDistance = 0f;
+    public float itemPickupDistance = 5f;
 
     private Rigidbody rb;
     private RaycastHit slopeHit;
@@ -101,6 +103,12 @@ public class PlayerMovement : MonoBehaviour
         HandleClimbing();
         HandleCameraEffects();
         sliding();
+
+        if (attachedObject != null)
+{
+    attachedObject.position = playerCamera.transform.position + playerCamera.transform.forward * attachedDistance;
+}
+
     }
 
     void HandleMovement()
@@ -169,35 +177,47 @@ public class PlayerMovement : MonoBehaviour
 
 
     void HandlePickup()
+{
+
+    Debug.DrawRay(head.position, head.forward * itemPickupDistance, Color.red);
+
+
+    RaycastHit hit;
+    bool cast = Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, itemPickupDistance);
+
+
+    if (Input.GetKeyDown(KeyCode.F))
     {
-        RaycastHit hit;
-        bool cast = Physics.Raycast(head.position, head.forward, out hit, itemPickupDistance);
-
-        if (Input.GetKeyDown(KeyCode.F))
+        // Drop the object
+        if (attachedObject != null)
         {
-            if (attachedObject != null)
-            {
-                attachedObject.SetParent(null);
-                if (attachedObject.TryGetComponent<Rigidbody>(out var body))
-                    body.isKinematic = false;
-                if (attachedObject.TryGetComponent<Collider>(out var col))
-                    col.enabled = true;
+            attachedObject.SetParent(null);
 
-                attachedObject = null;
-            }
-            else if (cast && hit.transform.CompareTag("pickable"))
-            {
-                attachedObject = hit.transform;
-                attachedObject.SetParent(transform);
-                attachedDistance = Vector3.Distance(attachedObject.position, head.position);
+            if (attachedObject.TryGetComponent<Rigidbody>(out var rb))
+                rb.isKinematic = false;
 
-                if (attachedObject.TryGetComponent<Rigidbody>(out var body))
-                    body.isKinematic = true;
-                if (attachedObject.TryGetComponent<Collider>(out var col))
-                    col.enabled = false;
-            }
+            if (attachedObject.TryGetComponent<Collider>(out var col))
+                col.enabled = true;
+
+            attachedObject = null;
+        }
+        // Pick up a new object
+        else if (cast && hit.transform.CompareTag("pickable"))
+        {
+            attachedObject = hit.transform;
+            attachedObject.SetParent(holdPoint);
+            attachedObject.localPosition = Vector3.zero;
+            attachedDistance = Vector3.Distance(attachedObject.position, head.position);
+
+            if (attachedObject.TryGetComponent<Rigidbody>(out var rb))
+                rb.isKinematic = true;
+
+            if (attachedObject.TryGetComponent<Collider>(out var col))
+                col.enabled = false;
         }
     }
+}
+
 
     void HandleCameraEffects()
     {
