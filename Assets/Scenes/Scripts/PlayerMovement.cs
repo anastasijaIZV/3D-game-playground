@@ -8,20 +8,24 @@ public class PlayerMovement : MonoBehaviour
     public Transform orientation;
 
     [Header("Movement")]
-    public float walkSpeed = 6f;
-    public float runSpeed = 12f;
-    public float jumpPower = 7f;
+    public float walkSpeed = 4f;
+    public float runSpeed = 6f;
+    public float jumpPower = 4f;
     public float gravity = 10f;
     public float lookSpeed = 2f;
     public float lookXLimit = 90f;
     public float defaultHeight = 2f;
     public float crouchHeight = 1f;
-    public float crouchSpeed = 3f;
+    public float crouchSpeed = 2f;
     public float slideSpeed = 9f;
     public float speedIncreaseMultiplier;
     public float slopeIncreaseMultiplier;
     public float impactThreshold;
     public float itemPickupDistance = 5f;
+    private bool isSliding = false;
+    private float originalWalkSpeed = 4f;
+    private float originalRunSpeed = 6f;
+
 
     [Header("Camera Effects")]
     public float baseCameraFov = 60f;
@@ -76,12 +80,16 @@ public class PlayerMovement : MonoBehaviour
     private bool grounded => characterController.isGrounded;
 
     void Start()
-    {
-        characterController = GetComponent<CharacterController>();
-        rb = GetComponent<Rigidbody>();
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
+{
+    characterController = GetComponent<CharacterController>();
+    rb = GetComponent<Rigidbody>();
+    Cursor.lockState = CursorLockMode.Locked;
+    Cursor.visible = false;
+
+    originalWalkSpeed = walkSpeed;
+    originalRunSpeed = runSpeed;
+}
+
 
     void Update()
     {
@@ -92,6 +100,7 @@ public class PlayerMovement : MonoBehaviour
         HandlePickup();
         HandleClimbing();
         HandleCameraEffects();
+        sliding();
     }
 
     void HandleMovement()
@@ -135,22 +144,29 @@ public class PlayerMovement : MonoBehaviour
     }
 
     void HandleCrouch()
+{
+    if (isSliding) return;
+
+    if (Input.GetKey(KeyCode.C) && canMove)
     {
-        if (Input.GetKey(KeyCode.C) && canMove)
+        if (!isCrouching)
         {
             characterController.height = crouchHeight;
             walkSpeed = crouchSpeed;
             runSpeed = crouchSpeed;
             isCrouching = true;
         }
-        else if (isCrouching)
-        {
-            characterController.height = defaultHeight;
-            walkSpeed = 6f;
-            runSpeed = 12f;
-            isCrouching = false;
-        }
     }
+    else if (isCrouching)
+    {
+        characterController.height = defaultHeight;
+        walkSpeed = originalWalkSpeed;
+        runSpeed = originalRunSpeed;
+        isCrouching = false;
+    }
+}
+
+
 
     void HandlePickup()
     {
@@ -272,6 +288,25 @@ public class PlayerMovement : MonoBehaviour
     {
         climbing = false;
     }
+
+    void sliding()
+{
+    if (Input.GetKey(KeyCode.L) && canMove)
+    {
+        isSliding = true;
+        characterController.height = crouchHeight;
+        walkSpeed = slideSpeed;
+    }
+    else if (isSliding)
+    {
+        isSliding = false;
+        characterController.height = defaultHeight;
+        walkSpeed = originalWalkSpeed;
+        runSpeed = originalRunSpeed;
+    }
+}
+
+
 
     public static float RestrictAngle(float angle, float angleMin, float angleMax)
     {
